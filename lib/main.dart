@@ -94,7 +94,7 @@ class _QRViewExampleState extends State<QRViewExample> {
   }
 
   Future<void> _checkWithVirusTotal(String url) async {
-  const apiKey = '1940a218ac7fe12e4503aef34a8d99c4dfa70b17fa85601a31ed46dfc08b3543';
+  const apiKey = 'YOUR_API_KEY';
   final encodedUrl = base64Url.encode(utf8.encode(url)).replaceAll('=', '');  // Encode and remove padding
   final apiUrl = 'https://www.virustotal.com/api/v3/urls/$encodedUrl';
 
