@@ -1,3 +1,3 @@
 # qris_safe
 
-A new Flutter project.
+Session 14 Material for Mobile Programming at Universitas Siber Asia
