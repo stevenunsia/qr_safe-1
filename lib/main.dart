@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'package:logger/logger.dart';
-import 'dart:io'; // Tambahkan import ini untuk menangani SocketException
+import 'dart:io';
 
 void main() => runApp(const MyApp());
 
@@ -97,27 +97,61 @@ class _QRViewExampleState extends State<QRViewExample> {
   }
 
   Future<void> _checkWithVirusTotal(String url) async {
-    const apiKey = '72a07f99c4b045ae9de25307f755973fbe40d7ccaf4625ba6fdb6b14590c60af';
-    final encodedUrl = base64Url.encode(utf8.encode(url)).replaceAll('=', '');
-    final apiUrl = 'https://www.virustotal.com/api/v3/urls/$encodedUrl';
+    const apiKey = 'a42713d726472bee6d829a171256c872e73be2e472e66a8022c29153a39f10ea';
+    final apiUrl = 'https://www.virustotal.com/api/v3/urls';
 
-    logger.d('Checking URL: $apiUrl');
+    logger.d('Checking URL: $url');
 
     try {
-      final response = await http.get(
+      final postResponse = await http.post(
         Uri.parse(apiUrl),
         headers: {
           'x-apikey': apiKey,
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'url=$url',
+      );
+
+      logger.d('POST Response status: ${postResponse.statusCode}');
+      logger.d('POST Response body: ${postResponse.body}');
+
+      if (postResponse.statusCode == 200) {
+        final jsonResponse = json.decode(postResponse.body);
+        final resourceId = jsonResponse['data']['id']; 
+
+        await Future.delayed(Duration(seconds: 10));
+
+        await _getVirusTotalReport(resourceId, url);
+      } else {
+        _showErrorDialog('Gagal mengirim URL ke VirusTotal. Kode status: ${postResponse.statusCode}');
+      }
+    } on SocketException catch (e) {
+      logger.e('SocketException: $e');
+      _showErrorDialog('Network error: Tidak dapat menghubungi VirusTotal. Periksa koneksi internet Anda.');
+    } catch (e) {
+      logger.e('Exception: $e');
+      _showErrorDialog('Error: $e');
+    }
+  }
+
+  Future<void> _getVirusTotalReport(String resourceId, String url) async {
+    const apiKey = 'a42713d726472bee6d829a171256c872e73be2e472e66a8022c29153a39f10ea';
+    final reportUrl = 'https://www.virustotal.com/api/v3/analyses/$resourceId';
+
+    try {
+      final response = await http.get(
+        Uri.parse(reportUrl),
+        headers: {
+          'x-apikey': apiKey,
         },
       );
 
-      logger.d('Response status: ${response.statusCode}');
-      logger.d('Response body: ${response.body}');
+      logger.d('GET Response status: ${response.statusCode}');
+      logger.d('GET Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final jsonResponse = json.decode(response.body);
-        final scanResult = jsonResponse['data']['attributes']['last_analysis_stats'];
+        final scanResult = jsonResponse['data']['attributes']['stats'];
 
         int malicious = scanResult['malicious'] ?? 0;
         int suspicious = scanResult['suspicious'] ?? 0;
@@ -130,14 +164,9 @@ class _QRViewExampleState extends State<QRViewExample> {
           _showSafeDialog(url);
         }
       } else {
-        logger.e('Error: Unable to scan the URL with VirusTotal. Status code: ${response.statusCode}');
-        _showErrorDialog('Error: Unable to scan the URL with VirusTotal.');
+        _showErrorDialog('Gagal mendapatkan hasil dari VirusTotal.');
       }
-    } on SocketException catch (e) {
-      logger.e('SocketException: $e');
-      _showErrorDialog('Network error: Unable to reach VirusTotal. Please check your internet connection.');
     } catch (e) {
-      logger.e('Exception: $e');
       _showErrorDialog('Error: $e');
     }
   }
@@ -150,12 +179,7 @@ class _QRViewExampleState extends State<QRViewExample> {
         title: const Text('URL Berbahaya'),
         content: Text('Website ini terdeteksi berbahaya atau mencurigakan.\n\n$url'),
         actions: <Widget>[
-          TextButton(
-            child: const Text('OK'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
+          TextButton(child: const Text('OK'), onPressed: () => Navigator.of(context).pop()),
         ],
       ),
     );
