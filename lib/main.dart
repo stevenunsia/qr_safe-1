@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'package:logger/logger.dart';
+import 'dart:io'; // Tambahkan import ini untuk menangani SocketException
 
 void main() => runApp(const MyApp());
 
@@ -100,7 +101,7 @@ class _QRViewExampleState extends State<QRViewExample> {
     final encodedUrl = base64Url.encode(utf8.encode(url)).replaceAll('=', '');
     final apiUrl = 'https://www.virustotal.com/api/v3/urls/$encodedUrl';
 
-    logger.d('Checking URL: $apiUrl'); // Debugging line
+    logger.d('Checking URL: $apiUrl');
 
     try {
       final response = await http.get(
@@ -111,8 +112,8 @@ class _QRViewExampleState extends State<QRViewExample> {
         },
       );
 
-      logger.d('Response status: ${response.statusCode}'); // Debugging line
-      logger.d('Response body: ${response.body}'); // Debugging line
+      logger.d('Response status: ${response.statusCode}');
+      logger.d('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final jsonResponse = json.decode(response.body);
@@ -121,20 +122,28 @@ class _QRViewExampleState extends State<QRViewExample> {
         int malicious = scanResult['malicious'] ?? 0;
         int suspicious = scanResult['suspicious'] ?? 0;
 
+        logger.d('Malicious: $malicious, Suspicious: $suspicious');
+
         if (malicious > 0 || suspicious > 0) {
           _showWarningDialog(url);
         } else {
           _showSafeDialog(url);
         }
       } else {
+        logger.e('Error: Unable to scan the URL with VirusTotal. Status code: ${response.statusCode}');
         _showErrorDialog('Error: Unable to scan the URL with VirusTotal.');
       }
+    } on SocketException catch (e) {
+      logger.e('SocketException: $e');
+      _showErrorDialog('Network error: Unable to reach VirusTotal. Please check your internet connection.');
     } catch (e) {
+      logger.e('Exception: $e');
       _showErrorDialog('Error: $e');
     }
   }
 
   void _showWarningDialog(String url) {
+    logger.d('Showing warning dialog for URL: $url');
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -153,6 +162,7 @@ class _QRViewExampleState extends State<QRViewExample> {
   }
 
   void _showSafeDialog(String url) {
+    logger.d('Showing safe dialog for URL: $url');
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -178,6 +188,7 @@ class _QRViewExampleState extends State<QRViewExample> {
   }
 
   void _showErrorDialog(String message) {
+    logger.d('Showing error dialog with message: $message');
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -197,6 +208,7 @@ class _QRViewExampleState extends State<QRViewExample> {
 
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
+    logger.d('Attempting to launch URL: $url');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else {
