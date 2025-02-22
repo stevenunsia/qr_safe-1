@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'package:logger/logger.dart';
-import 'dart:io';
+import 'dart:io'; // Untuk menangani error koneksi
 
 void main() => runApp(const MyApp());
 
@@ -119,7 +119,7 @@ class _QRViewExampleState extends State<QRViewExample> {
         final jsonResponse = json.decode(postResponse.body);
         final resourceId = jsonResponse['data']['id']; 
 
-        await Future.delayed(Duration(seconds: 10));
+        await Future.delayed(Duration(seconds: 10)); 
 
         await _getVirusTotalReport(resourceId, url);
       } else {
